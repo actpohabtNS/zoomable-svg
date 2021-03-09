@@ -276,9 +276,26 @@ class ZoomableSvg extends Component {
     let lastRelease = 0;
     const checkDoubleTap = (timestamp, x, y, shift) => {
       const { doubleTapThreshold, doubleTapZoom = 2 } = this.props;
+      
+      const {
+        zoom: initialZoom,
+        constraints: {
+          scaleExtent: [, maxZoom],
+        },
+      } = this.state;
+
+      if (timestamp - lastRelease == 0) return;
+
       if (doubleTapThreshold && timestamp - lastRelease < doubleTapThreshold) {
-        this.zoomBy(shift ? 1 / doubleTapZoom : doubleTapZoom, x, y);
+        if (shift) {
+          this.zoomBy(1 / doubleTapZoom, x, y);
+        } else if (initialZoom + doubleTapZoom <= maxZoom + 1) {
+          this.zoomBy(doubleTapZoom, x, y);
+        } else {
+          this.zoomBy(1 / initialZoom, x, y);
+        }
       }
+
       lastRelease = timestamp;
     };
     this.onMouseUp = ({

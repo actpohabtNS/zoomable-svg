@@ -270,13 +270,16 @@ class ZoomableSvg extends Component {
     const noop = () => {};
     const yes = () => true;
     const shouldRespond = (evt, { dx, dy }) => {
-      const { moveThreshold = 5, doubleTapThreshold, lock } = this.props;
+      //MOVED: checkDoubleTap moved to shouldRespond
+      const { moveThreshold = 5, lock } = this.props;
+      const { timestamp, shiftKey, pageX, pageY } = evt.nativeEvent;
       return (
         !lock &&
         (evt.nativeEvent.touches.length === 2 ||
           dx * dx + dy * dy >= moveThreshold ||
-          doubleTapThreshold)
+          (evt.nativeEvent.touches.length === 1 ? checkDoubleTap(timestamp, pageX, pageY, shiftKey) : false))
       );
+      //==============================================
     };
     let lastRelease = 0;
     const checkDoubleTap = (timestamp, x, y, shift) => {
@@ -305,6 +308,8 @@ class ZoomableSvg extends Component {
 
       lastRelease = timestamp;
     };
+    //MOVED: checkDoubleTap moved to shouldRespond
+    /*
     this.onMouseUp = ({
       clientX,
       clientY,
@@ -312,6 +317,8 @@ class ZoomableSvg extends Component {
     }) => {
       checkDoubleTap(timeStamp, clientX, clientY, shiftKey);
     };
+    */
+    //=============================================
     this._panResponder = PanResponder.create({
       onPanResponderGrant: noop,
       onPanResponderTerminate: noop,
@@ -341,9 +348,13 @@ class ZoomableSvg extends Component {
         e.preventDefault();
       },
       onPanResponderRelease: ({ nativeEvent: { timestamp } }, { x0, y0 }) => {
+        //MOVED: checkDoubleTap moved to shouldRespond
+        /*
         if (Platform.OS !== 'web') {
           checkDoubleTap(timestamp, x0, y0);
         }
+        */
+       //============================================
         this.setState({
           isZooming: false,
           isMoving: false,

@@ -467,6 +467,16 @@ class ZoomableSvg extends Component {
       const left = (initialLeft + dx - x) * touchZoom + x;
       const top = (initialTop + dy - y) * touchZoom + y;
       const zoom = initialZoom * touchZoom;
+      
+      //ADDED to package: block moving when min/max zoomed
+      const {
+        constraints: {
+          scaleExtent: [minZoom, maxZoom],
+        },
+      } = this.state;
+
+      if (zoom > maxZoom || zoom < minZoom) return;
+      //=================================================
 
       const nextState = {
         zoom,

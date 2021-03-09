@@ -277,6 +277,7 @@ class ZoomableSvg extends Component {
     const checkDoubleTap = (timestamp, x, y, shift) => {
       const { doubleTapThreshold, doubleTapZoom = 2 } = this.props;
       
+      //CHANGED: when on maxZoom doubleTap causes setting zoom to 0
       const {
         zoom: initialZoom,
         constraints: {
@@ -295,6 +296,7 @@ class ZoomableSvg extends Component {
           this.zoomBy(1 / initialZoom, x, y);
         }
       }
+      //============================================================
 
       lastRelease = timestamp;
     };

@@ -131,17 +131,22 @@ function getTransform(vbRect, eRect, align, meetOrSlice) {
 }
 
 function getConstraints(props, viewBox) {
-  const { constrain } = props;
-  if (!constrain) {
-    return null;
-  }
+  //FIXED: crashing when "constrain: null"
+  let combine = 'dynamic';
+  let scaleExtent = [0, Infinity];
+  let translateExtent = [[-Infinity, -Infinity], [Infinity, Infinity]];
 
-  // Constraints
-  const {
-    combine = 'dynamic',
-    scaleExtent = [0, Infinity],
-    translateExtent = [[-Infinity, -Infinity], [Infinity, Infinity]],
-  } = constrain;
+  const { constrain } = props;
+
+  if (constrain) {
+    // Constraints
+    ({
+      combine = 'dynamic',
+      scaleExtent = [0, Infinity],
+      translateExtent = [[-Infinity, -Infinity], [Infinity, Infinity]],
+    } = constrain);
+  }
+  //===================================
 
   const [minZoom = 0, maxZoom = Infinity] = scaleExtent;
 

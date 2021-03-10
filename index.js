@@ -17,6 +17,7 @@ const { Component } = React;
 
 // Based on https://gist.github.com/evgen3188/db996abf89e2105c35091a3807b7311d
 
+let runningAnimation = false;
 let animatingXY = Animated.ValueXY;
 let animatingZoom = Animated.Value;
 
@@ -580,8 +581,26 @@ class ZoomableSvg extends Component {
         zoom,
       };
 
-      Animated.decay(animatingXY,
-        {toValue: {x: nextState.left, y: nextState.top}, velocity: {x: vx, y: vy}, deceleration: 0.995}).start();
+      if(runningAnimation){
+        console.log("Stop last");
+        runningAnimation.stop();
+      }
+
+      if(Platform.OS === 'ios'){
+     // console.log("Animateto", nextState.left, nextState.top);
+      runningAnimation = Animated.decay(animatingXY,
+        {toValue: {x: nextState.left, y: nextState.top}, velocity: {x: vx, y: vy}, deceleration: 0.995})
+
+        runningAnimation.start();
+      }
+      else{
+
+        this.setState({
+          animatingLeft: nextState.left,
+          animatingTop: nextState.top
+        })
+
+      }
 
       this.setState(constrain ? this.constrainExtent(nextState) : nextState);
     }

@@ -12,10 +12,13 @@ if (!RN) {
   throw new Error('failed to import react-native(-web)');
 }
 
-const { View, PanResponder, Platform } = RN;
+const { View, PanResponder, Platform, Animated } = RN;
 const { Component } = React;
 
 // Based on https://gist.github.com/evgen3188/db996abf89e2105c35091a3807b7311d
+
+let animatingXY = Animated.ValueXY;
+let animatingZoom = Animated.Value;
 
 function calcDistance(x1, y1, x2, y2) {
   const dx = x1 - x2;
@@ -231,13 +234,22 @@ function getDerivedStateFromProps(props, state) {
     eRect = { width, height },
     vbRect = { width: vbWidth || width, height: vbHeight || height },
   } = props;
-  const { top: currTop, left: currLeft, zoom: currZoom } = state;
+  const {
+    top: currTop,
+    left: currLeft,
+    animatingTop: currAnimatingTop,
+    animatingLeft: currAnimatingLeft,
+    animatingZoom: currAnimatingZoom,
+    zoom: currZoom, } = state;
   const viewBox = getTransform(vbRect, eRect, getAlignment(align), meetOrSlice);
   return {
     constraints: getConstraints(props, viewBox),
     top: top || currTop,
+    animatingTop: top || currAnimatingTop,
     left: left || currLeft,
+    animatingLeft: left || currAnimatingLeft,
     zoom: zoom || currZoom,
+    animatingZoom: zoom || currAnimatingZoom,
     ...viewBox,
   };
 }
@@ -250,23 +262,46 @@ function getZoomTransform({
   scaleY,
   translateX,
   translateY,
+  animatingLeft,
+  animatingTop,
+  animatingZoom,
 }) {
   return {
-    translateX: left + zoom * translateX,
-    translateY: top + zoom * translateY,
-    scaleX: zoom * scaleX,
-    scaleY: zoom * scaleY,
+    translateX: animatingLeft + animatingZoom * translateX,
+    translateY: animatingTop + animatingZoom * translateY,
+    scaleX: animatingZoom * scaleX,
+    scaleY: animatingZoom * scaleY,
   };
 }
 
 class ZoomableSvg extends Component {
   constructor(props) {
     super();
-    this.state = getDerivedStateFromProps(props, {
-      zoom: props.initialZoom || 1,
-      left: props.initialLeft || 0,
-      top: props.initialTop || 0,
-    });
+      this.state = getDerivedStateFromProps(props, {
+        zoom: props.initialZoom || 1,
+        left: props.initialLeft || 0,
+        top: props.initialTop || 0,
+        animatingLeft: props.initialLeft || 0,
+        animatingTop: props.initialTop || 0,
+        animatingZoom: props.initialZoom || 1
+      });
+
+      animatingXY = new Animated.ValueXY(this.state.left, this.state.top);
+
+      animatingZoom = new Animated.Value(this.state.zoom);
+
+      animatingXY.addListener((l) => {
+        this.setState({
+          animatingLeft: l.x,
+          animatingTop: l.y
+        })
+      });
+      animatingZoom.addListener((l) => {
+        this.setState({
+          animatingZoom: l.value,
+        })
+      });
+
     const noop = () => {};
     const yes = () => true;
     const shouldRespond = (evt, { dx, dy }) => {
@@ -328,12 +363,12 @@ class ZoomableSvg extends Component {
       onStartShouldSetPanResponder: shouldRespond,
       onMoveShouldSetPanResponderCapture: shouldRespond,
       onStartShouldSetPanResponderCapture: shouldRespond,
-      onPanResponderMove: e => {
+      onPanResponderMove: (e, gestureState) => {
         const { nativeEvent: { touches } } = e;
         const { length } = touches;
         if (length === 1) {
           const [{ pageX, pageY }] = touches;
-          this.processTouch(pageX, pageY);
+          this.processTouch(pageX, pageY, gestureState.vx, gestureState.vy);
         } else if (length === 2) {
           const [touch1, touch2] = touches;
           this.processPinch(
@@ -347,7 +382,7 @@ class ZoomableSvg extends Component {
         }
         e.preventDefault();
       },
-      onPanResponderRelease: ({ nativeEvent: { timestamp } }, { x0, y0 }) => {
+      onPanResponderRelease: () => {
         //MOVED: checkDoubleTap moved to shouldRespond
         /*
         if (Platform.OS !== 'web') {
@@ -501,12 +536,27 @@ class ZoomableSvg extends Component {
         left,
         top,
       };
+      
+      requestAnimationFrame(() => {
+        Animated.spring(animatingZoom, {
+          toValue: zoom,
+          tension: 40
+        }).start();
+        Animated.spring(animatingXY, {
+          toValue: {
+            x: left,
+            y: top
+          },
+          tension: 40
+        }).start();
+  
+        })
 
       this.setState(constrain ? this.constrainExtent(nextState) : nextState);
     }
   }
 
-  processTouch(x, y) {
+  processTouch(x, y, vx, vy) {
     if (!this.state.isMoving || this.state.isZooming) {
       const { top, left } = this.state;
       this.setState({
@@ -529,6 +579,9 @@ class ZoomableSvg extends Component {
         top: initialTop + dy,
         zoom,
       };
+
+      Animated.decay(animatingXY,
+        {toValue: {x: nextState.left, y: nextState.top}, velocity: {x: vx, y: vy}, deceleration: 0.995}).start();
 
       this.setState(constrain ? this.constrainExtent(nextState) : nextState);
     }

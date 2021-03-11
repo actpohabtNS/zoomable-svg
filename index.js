@@ -541,14 +541,16 @@ class ZoomableSvg extends Component {
       requestAnimationFrame(() => {
         Animated.spring(animatingZoom, {
           toValue: zoom,
-          tension: 40
+          tension: 40,
+          useNativeDriver: true,
         }).start();
         Animated.spring(animatingXY, {
           toValue: {
             x: left,
             y: top
           },
-          tension: 40
+          tension: 40,
+          useNativeDriver: true,
         }).start();
   
         })
